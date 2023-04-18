@@ -17,6 +17,7 @@ const jwt = require("jsonwebtoken");
 const app = express();
 
 const bcrypt = require("bcryptjs");
+const { generateAuthToken } = require("./utils/jwt.util");
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY);
 
@@ -25,18 +26,17 @@ app.use(express.json());
 app.use(cors());
 // Logic goes here
 
-module.exports = app;
 
 app.post("/welcome", auth, (req, res) => {
   res.status(200).send("Welcome to the Page");
 });
 //stripe check
-app.get('/health-check',async(req,res) =>{
+app.get('/health-check', async (req, res) => {
   console.log('Request Received');
-  const isStripeUp = await fetch('https://api.stripe.com/healthcheck').then((res)=>res.statusText);
+  const isStripeUp = await fetch('https://api.stripe.com/healthcheck').then((res) => res.statusText);
   console.log(isStripeUp);
   res.send({
-    status:isStripeUp
+    status: isStripeUp
   });
 })
 
@@ -55,28 +55,21 @@ app.post("/login", async (req, res) => {
     // Validate if user exist in our database
     const user = await User.findOne({ user_name });
 
-   if (!user) return res.status(401).json('Invalid credentials')
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' })
 
-const isValidPassword = await bcrypt.compare(password, user.password)
+    const isValidPassword = await bcrypt.compare(password, user.password)
+    if (!isValidPassword) return res.status(401).json({ message: 'Invalid credentials' })
 
-if(!isValidPassword) return res.status(401).json('Invalid password credentials')
 
-  
-      // Create token
-      const token = jwt.sign(
-        { user_id: user._id, user_name },
-        `${process.env.TOKEN_KEY}`,
-        {
-          expiresIn: "2h",
-        }
-      );
+    // Create token
+    const token = generateAuthToken({ _id: user._id })
 
-      // save user token
-      user.token = token;
+    // save user token
+    user.token = token;
 
-      // user
-      res.status(200).json(user);
-    
+    // user
+    res.status(200).json(user);
+
   } catch (err) {
     console.log(err);
   }
@@ -110,26 +103,20 @@ app.post("/register", async (req, res) => {
     // Create user in our database
     const user = await User.create({
       ...req.body,
-    email: email.toLowerCase(), 
+      email: email.toLowerCase(),
       // sanitize: convert email to lowercase
       password: encryptedPassword,
     });
 
     // Create token
-    const token = jwt.sign(
-      { user_id: user._id, email, user_name },
-      `${process.env.TOKEN_KEY}`,
-      {
-        expiresIn: "2h",
-      }
-    );
+    const token = generateAuthToken({ _id: user._id })
 
     // save user token
     user.token = token;
 
     // return new user
     const obscuredUser = user.toObject()
-delete obscuredUser.password;
+    delete obscuredUser.password;
 
     res.status(201).json(obscuredUser);
   } catch (err) {
@@ -137,3 +124,5 @@ delete obscuredUser.password;
   }
   // Our register logic ends here
 });
+
+module.exports = app;
