@@ -27,20 +27,24 @@ app.use(cors());
 // Logic goes here
 
 
-app.post("/welcome", auth, (req, res) => {
-  res.status(200).send("Welcome to the Page");
+app.post("/", (req, res) => {
+  res.status(200).send("Hello world!");
 });
 //stripe check
-app.get('/health-check', async (req, res) => {
-  console.log('Request Received');
-  const isStripeUp = await fetch('https://api.stripe.com/healthcheck').then((res) => res.statusText);
-  console.log(isStripeUp);
-  res.send({
-    status: isStripeUp
-  });
-})
+// app.get('/health-check', async (req, res) => {
+//   console.log('Request Received');
+//   const isStripeUp = await fetch('https://api.stripe.com/healthcheck').then((res) => res.statusText);
+//   console.log(isStripeUp);
+//   res.send({
+//     status: isStripeUp
+//   });
+// })
 
 // Login
+
+app.get('/users', auth, (req, res) => {
+  res.send(req.user);
+})
 
 app.post("/login", async (req, res) => {
   // Our login logic starts here
